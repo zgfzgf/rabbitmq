@@ -1,0 +1,52 @@
+{
+  "dataSource": {
+    "driverName": "mysql",
+    "addr": "127.0.0.1:3306",
+    "database": "trade",
+    "user": "root",
+    "password": "",
+    "enableAutoMigrate": false
+  },
+  "redis": {
+    "addr": ":6379",
+    "password": ""
+  },
+  "rabbitMq": {
+    "user": "admin",
+    "password": "admin",
+    "addr": "192.168.237.142:5672",
+    "readQueue": {
+      "queueSuffix": ".read.queue",
+      "routeKeySuffix": ".read.key",
+      "exchangeSuffix": ".read.exchange"
+    },
+    "storeQueue": {
+      "queueSuffix": ".store.queue",
+      "routeKeySuffix": ".store.key",
+      "exchangeSuffix": ".store.exchange"
+    },
+    "infoQueue": {
+      "queueSuffix": ".info.queue",
+      "routeKeySuffix": ".info.key",
+      "exchangeSuffix": ".info.exchange"
+    }
+  },
+  "chanNum": {
+    "reader": 10,
+    "store": 10,
+    "ack": 10,
+    "info": 10,
+    "logStore": 10,
+    "logInfo": 10
+  },
+  "log": {
+    "level": 1,          
+    "filename":   "./trace.log",
+		"max_size":    100,
+		"max_backups": 0,    
+		"max_age":     1,   
+		"compress":   false      
+  }
+}
+
+
