@@ -47,7 +47,7 @@ type ChanNumConfing struct {
 	Reader   int `json:"reader"`
 	Store    int `json:"store"`
 	Ack      int `json:"ack"`
-	Info    int `json:"info"`
+	Info     int `json:"info"`
 	LogStore int `json:"logStore"`
 	LogInfo  int `json:"logInfo"`
 }

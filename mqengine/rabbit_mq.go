@@ -137,8 +137,9 @@ func (r *RabbitMq) listenProducer(producer Producer) {
 	commit := true
 	for {
 		message, ok := <-storeChan
-		if !ok{
-			logger.Error("mq publish message failed!", zap.Bool("ok", ok))
+		if !ok && ackChan != nil {
+			close(ackChan)
+			logger.Info("ack channel close!")
 			return
 		}
 		if err := r.channel.Publish(r.exchange, r.routeKey, false, false, amqp.Publishing{
@@ -247,8 +248,7 @@ func (r *RabbitMq) listenReceiver(receiver Receiver) {
 			zap.String("exchange", r.exchange))
 	}
 
-	//r.channel.Qos(1, 0, true)
-
+	r.channel.Qos(1, 0, true)
 	if msgList, err := r.channel.Consume(r.queue, "", false, false, false, false, nil); err != nil {
 		logger.Error("consume channel failed!",
 			zap.String("queue", r.queue),
@@ -259,7 +259,6 @@ func (r *RabbitMq) listenReceiver(receiver Receiver) {
 			msg := <-msgList
 			message := NewMessage(&msg)
 			readChan <- message
-
 			logger.Debug("message",
 				zap.String("messageId", message.MessageId),
 				zap.String("type", message.Type),

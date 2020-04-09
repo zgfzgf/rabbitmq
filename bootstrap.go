@@ -1,8 +1,12 @@
 package main
 
-import "github.com/zgfzgf/rabbitmq/mqengine"
+import (
+	"context"
+	"github.com/zgfzgf/rabbitmq/mqengine"
+	"sync"
+)
 
-func StartEngine() {
+func StartEngine(ctx context.Context, wg *sync.WaitGroup) {
 	//productIds := [2]string{"aaa", "bbb"}
 	productIds := [1]string{"aaa"}
 	for _, productId := range productIds {
@@ -11,6 +15,6 @@ func StartEngine() {
 		storeMq := mqengine.NewStoreMQ(productId)
 		infoMq := mqengine.NewInfoMQ(productId)
 		engine := mqengine.NewEngine(productId, process, readerMq, storeMq, infoMq)
-		engine.Start()
+		engine.Start(ctx, wg)
 	}
 }
