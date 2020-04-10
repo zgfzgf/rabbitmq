@@ -24,6 +24,8 @@ type Engine struct {
 
 	logStoreChan chan Log
 	logInfoChan  chan Log
+
+	closeChan chan struct{}
 }
 
 func NewEngine(productId string, proccess Proccess, reader, store, info *RabbitMq) *Engine {
@@ -39,50 +41,57 @@ func NewEngine(productId string, proccess Proccess, reader, store, info *RabbitM
 		infoChan:     make(chan *Message, config.ChanNum.Info),
 		logStoreChan: make(chan Log, config.ChanNum.LogStore),
 		logInfoChan:  make(chan Log, config.ChanNum.LogInfo),
+		closeChan:    make(chan struct{}),
 	}
 	return e
 }
 
 func (e *Engine) Start(ctx context.Context, wg *sync.WaitGroup) {
-	e.readerHandle.RegisterReceiver(NewReader(e))
-	go e.readerHandle.Start()
-	e.storeHandle.RegisterProducer(NewStore(e))
-	go e.storeHandle.Start()
-	e.infoHandle.RegisterProducer(NewInfo(e))
-	go e.infoHandle.Start()
-	go e.runApplier(ctx)
+	go e.readerHandle.Reader(ctx, NewReader(e))
+	go e.storeHandle.Store(NewStore(e))
+	go e.infoHandle.Store(NewInfo(e))
+	go e.runApplier()
 	go e.runLogStore()
 	go e.runLogInfo()
-	go e.runCommitter(wg)
+	go e.runCommitter()
+	go e.close(wg)
+}
+
+func (e *Engine) close(wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
+	<-e.closeChan
 }
 
 // 从本地队列获取消息
-func (e *Engine) runApplier(ctx context.Context) {
+func (e *Engine) runApplier() {
 	for {
 		select {
-		case message := <-e.readerChan:
-			storeLog, infoLog := e.proccess.OnProccess(message)
-			if len(storeLog) > 0 {
-				e.logStoreChan <- e.proccess.OnStart(message, len(storeLog))
-				for _, log := range storeLog {
-					logger.Debug("send storelog",
+		case message, ok := <-e.readerChan:
+			if ok {
+				storeLog, infoLog := e.proccess.OnProccess(message)
+				if len(storeLog) > 0 {
+					e.logStoreChan <- e.proccess.OnStart(message, len(storeLog))
+					for _, log := range storeLog {
+						logger.Debug("send storeLog",
+							zap.String("correlationId", log.GetMessage().CorrelationId),
+							zap.ByteString("body", log.GetMessage().Body))
+						e.logStoreChan <- log
+					}
+					e.logStoreChan <- e.proccess.OnEnd(message, len(storeLog))
+				}
+				for _, log := range infoLog {
+					logger.Debug("send infoLog",
 						zap.String("correlationId", log.GetMessage().CorrelationId),
 						zap.ByteString("body", log.GetMessage().Body))
-					e.logStoreChan <- log
+					e.logInfoChan <- log
 				}
-				e.logStoreChan <- e.proccess.OnEnd(message, len(storeLog))
+			} else {
+				close(e.logStoreChan)
+				close(e.logInfoChan)
+				logger.Info("close logStoreChan and logInfoChan")
+				return
 			}
-			for _, log := range infoLog {
-				logger.Debug("send infoLog",
-					zap.String("correlationId", log.GetMessage().CorrelationId),
-					zap.ByteString("body", log.GetMessage().Body))
-				e.logInfoChan <- log
-			}
-		case <-ctx.Done():
-			close(e.logStoreChan)
-			close(e.logInfoChan)
-			logger.Info("close logStoreChan and logInfoChan")
-			return
 		}
 	}
 }
@@ -123,9 +132,7 @@ func (e *Engine) runLogInfo() {
 }
 
 //  将消费者产生的log进行持久化
-func (e *Engine) runCommitter(wg *sync.WaitGroup) {
-	defer wg.Done()
-	wg.Add(1)
+func (e *Engine) runCommitter() {
 	for {
 		select {
 		case message, ok := <-e.ackChan:
@@ -136,7 +143,8 @@ func (e *Engine) runCommitter(wg *sync.WaitGroup) {
 					logger.Info("to do")
 				}
 			} else {
-				logger.Info("end commit")
+				logger.Info("end commit func")
+				e.closeChan <- struct{}{}
 				return
 			}
 		}
@@ -148,10 +156,9 @@ type Reader struct {
 }
 
 func NewReader(e *Engine) *Reader {
-	return &Reader{
-		engine: e}
+	return &Reader{engine: e}
 }
-func (r *Reader) Consumer() chan<- *Message {
+func (r *Reader) Reader() chan<- *Message {
 	return r.engine.readerChan
 }
 
@@ -160,8 +167,7 @@ type Store struct {
 }
 
 func NewStore(e *Engine) *Store {
-	return &Store{
-		engine: e}
+	return &Store{engine: e}
 }
 func (s *Store) Store() (<-chan *Message, chan<- *Message) {
 	return s.engine.storeChan, s.engine.ackChan
@@ -172,8 +178,7 @@ type Info struct {
 }
 
 func NewInfo(e *Engine) *Info {
-	return &Info{
-		engine: e}
+	return &Info{engine: e}
 }
 func (i *Info) Store() (<-chan *Message, chan<- *Message) {
 	return i.engine.infoChan, nil

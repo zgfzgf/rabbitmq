@@ -7,7 +7,7 @@ type Producer interface {
 
 //  消费者接口
 type Receiver interface {
-	Consumer() chan<- *Message
+	Reader() chan<- *Message
 }
 
 //  消费者处理结果接口

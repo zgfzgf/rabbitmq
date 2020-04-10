@@ -2,22 +2,13 @@ package mqengine
 
 import (
 	"github.com/streadway/amqp"
-	"go.uber.org/zap"
 )
 
-func NewStoreMQ(productId string /*, producer Producer*/) *RabbitMq {
-	queueExchange := &QueueExchange{
-		QueueName:    productId + config.RabbitMq.StoreQueue.QueueSuffix,
-		RouteKey:     productId + config.RabbitMq.StoreQueue.RouteKeySuffix,
-		ExchangeName: productId + config.RabbitMq.StoreQueue.ExchangeSuffix,
-		ExchangeType: amqp.ExchangeDirect,
+func NewStoreMQ(productId string) *RabbitMq {
+	return &RabbitMq{
+		queueName:    productId + config.RabbitMq.StoreQueue.QueueSuffix,
+		routeKey:     productId + config.RabbitMq.StoreQueue.RouteKeySuffix,
+		exchangeName: productId + config.RabbitMq.StoreQueue.ExchangeSuffix,
+		exchangeType: amqp.ExchangeDirect,
 	}
-	mq := NewAmqp(queueExchange)
-	//mq.RegisterProducer(producer)
-	logger.Info("Init StoreMQ",
-		zap.String("queueName", queueExchange.QueueName),
-		zap.String("routeKey", queueExchange.RouteKey),
-		zap.String("exchangeName", queueExchange.ExchangeName),
-		zap.String("exchangeType", queueExchange.ExchangeType))
-	return mq
 }
