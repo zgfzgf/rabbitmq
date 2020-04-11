@@ -74,7 +74,7 @@ func (r *RabbitMq) Store(producer Producer) {
 			zap.String("exchange", r.exchangeName))
 	}
 
-	if _, err := channel.QueueDeclare(r.queueName, true, false, false, false, nil); err != nil {
+	if _, err := channel.QueueDeclare(r.queueName, true, false, true, false, nil); err != nil {
 		logger.Error("declare channel failed!",
 			zap.String("queue", r.queueName),
 			zap.Error(err))
@@ -100,9 +100,11 @@ func (r *RabbitMq) Store(producer Producer) {
 	commit := true
 	for {
 		message, ok := <-storeChan
-		if !ok && ackChan != nil {
-			close(ackChan)
-			logger.Info("ack channel close!")
+		if !ok {
+			if ackChan != nil {
+				close(ackChan)
+				logger.Info("ack channel close!")
+			}
 			return
 		}
 		if err := channel.Publish(r.exchangeName, r.routeKey, false, false, amqp.Publishing{
@@ -154,7 +156,7 @@ func (r *RabbitMq) Reader(ctx context.Context, receiver Receiver) {
 			zap.String("exchange", r.exchangeName))
 	}
 
-	if _, err := channel.QueueDeclare(r.queueName, true, false, false, false, nil); err != nil {
+	if _, err := channel.QueueDeclare(r.queueName, true, false, true, false, nil); err != nil {
 		logger.Error("declare channel failed!",
 			zap.String("queue", r.queueName),
 			zap.Error(err))
@@ -178,8 +180,8 @@ func (r *RabbitMq) Reader(ctx context.Context, receiver Receiver) {
 			zap.String("exchange", r.exchangeName))
 	}
 
-	channel.Qos(1, 0, true)
-	if msgList, err := channel.Consume(r.queueName, "", false, false, false, false, nil); err != nil {
+	// channel.Qos(1, 0, true)
+	if msgList, err := channel.Consume(r.queueName, "", false, true, false, false, nil); err != nil {
 		logger.Error("consume channel failed!",
 			zap.String("queue", r.queueName),
 			zap.Error(err))
@@ -187,16 +189,22 @@ func (r *RabbitMq) Reader(ctx context.Context, receiver Receiver) {
 	} else {
 		for {
 			select {
-			case msg := <-msgList:
-				message := NewMessage(&msg)
-				readChan <- message
-				logger.Debug("message",
-					zap.String("messageId", message.MessageId),
-					zap.String("type", message.Type),
-					zap.Time("timestamp", message.Timestamp),
-					zap.String("userId", message.UserId),
-					zap.String("appId", message.AppId),
-					zap.ByteString("body", message.Body))
+			case msg, ok := <-msgList:
+				if ok {
+					message := NewMessage(&msg)
+					readChan <- message
+					logger.Debug("message",
+						zap.String("messageId", message.MessageId),
+						zap.String("type", message.Type),
+						zap.Time("timestamp", message.Timestamp),
+						zap.String("userId", message.UserId),
+						zap.String("appId", message.AppId),
+						zap.ByteString("body", message.Body))
+				} else {
+					close(readChan)
+					logger.Info("close readChan")
+					return
+				}
 			case <-ctx.Done():
 				close(readChan)
 				logger.Info("close readChan")
