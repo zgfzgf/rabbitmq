@@ -17,13 +17,25 @@ type Log interface {
 
 //  消息处理接口
 type Proccess interface {
-	OnStart(*Message, int) Log
-	OnProccess(*Message) ([]Log, []Log)
-	OnEnd(*Message, int) Log
+	Start(*Message, interface{}, int) Log
+	Work(*Message) ([]Log, []Log, interface{})
+	End(*Message, interface{}, int) Log
+	NotSnapShot(interface{}, interface{}, int) bool
+	CmpTransId(interface{}, interface{}) bool
+	GetTransId() interface{}
+	Snapshot() []byte
+	Restore([]byte)
 }
 
 //  发送消息处理接口
 type Send interface {
 	SendChan() <-chan *Message
 	OnProccess(*Message)
+}
+
+type SnapshotStore interface {
+	// 保存快照
+	Store([]byte) error
+	// 获取最后一次快照
+	GetLatest() ([]byte, error)
 }

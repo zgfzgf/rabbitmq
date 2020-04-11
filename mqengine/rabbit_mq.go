@@ -9,10 +9,10 @@ import (
 )
 
 type RabbitMq struct {
-	queueName    string // 队列名
-	routeKey     string // 路由key
-	exchangeName string // 交换机名称
-	exchangeType string // 交换机类型
+	queueName    string
+	routeKey     string
+	exchangeName string
+	exchangeType string
 }
 
 var connection *amqp.Connection
@@ -74,7 +74,7 @@ func (r *RabbitMq) Store(producer Producer) {
 			zap.String("exchange", r.exchangeName))
 	}
 
-	if _, err := channel.QueueDeclare(r.queueName, true, false, true, false, nil); err != nil {
+	if _, err := channel.QueueDeclare(r.queueName, true, false, false, false, nil); err != nil {
 		logger.Error("declare channel failed!",
 			zap.String("queue", r.queueName),
 			zap.Error(err))
@@ -156,7 +156,7 @@ func (r *RabbitMq) Reader(ctx context.Context, receiver Receiver) {
 			zap.String("exchange", r.exchangeName))
 	}
 
-	if _, err := channel.QueueDeclare(r.queueName, true, false, true, false, nil); err != nil {
+	if _, err := channel.QueueDeclare(r.queueName, true, false, false, false, nil); err != nil {
 		logger.Error("declare channel failed!",
 			zap.String("queue", r.queueName),
 			zap.Error(err))

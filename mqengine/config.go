@@ -50,6 +50,7 @@ type ChanNumConfing struct {
 	Info     int `json:"info"`
 	LogStore int `json:"logStore"`
 	LogInfo  int `json:"logInfo"`
+	Snapshot int `json:"snapshot"`
 }
 
 type LogConfig struct {

@@ -9,6 +9,7 @@ type Message struct {
 	Body                []byte
 	Status              MessageStatus
 	Commit              bool
+	TransId             interface{}
 	Priority            uint8     // queue implementation use - 0 to 9
 	CorrelationId       string    // application use - correlation identifier
 	ReplyTo             string    // application use - address to to reply to (ex: RPC)

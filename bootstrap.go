@@ -14,7 +14,8 @@ func StartEngine(ctx context.Context, wg *sync.WaitGroup) {
 		readerMq := mqengine.NewReaderMQ(productId)
 		storeMq := mqengine.NewStoreMQ(productId)
 		infoMq := mqengine.NewInfoMQ(productId)
-		engine := mqengine.NewEngine(productId, process, readerMq, storeMq, infoMq)
+		snapshotStore := mqengine.NewRedisSnapshotStore(productId)
+		engine := mqengine.NewEngine(productId, process, readerMq, storeMq, infoMq, snapshotStore)
 		engine.Start(ctx, wg)
 	}
 }

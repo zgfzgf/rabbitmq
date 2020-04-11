@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"github.com/zgfzgf/rabbitmq/mqengine"
+	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"sync"
 )
 
+var logger *zap.Logger
+
 func main() {
 	mqengine.GetConfig("./conf.json")
-	logger := mqengine.GetLog()
+	logger = mqengine.GetLog()
 	logger.Info("log 初始化成功")
 	mqengine.GetRabbitMqConn()
 	defer mqengine.CloseRabbitMqConn()

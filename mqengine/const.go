@@ -14,3 +14,10 @@ const (
 	//  结束状态
 	MessageStatusEnd = MessageStatus("end")
 )
+
+const (
+	SnapshotPrefix     = "matching:snapshot:"
+	SnapshotDelta  int = 10
+	SnapshotSecond     = 30
+	SnapshotHour       = 7 * 24
+)

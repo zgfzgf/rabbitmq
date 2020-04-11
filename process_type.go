@@ -18,12 +18,14 @@ type Base struct {
 
 type LogStart struct {
 	Base
-	Num int
+	TransId interface{}
+	Num     int
 }
 
 func (l *LogStart) GetMessage() *mqengine.Message {
 	byte, _ := json.Marshal(l)
 	return &mqengine.Message{
+		TransId:       l.TransId,
 		Status:        l.Status,
 		Body:          byte,
 		CorrelationId: l.CorrelationId,
@@ -35,6 +37,7 @@ func (l *LogStart) GetMessage() *mqengine.Message {
 
 type LogEnd struct {
 	Base
+	TransId             interface{}
 	Num                 int
 	CorrelationDelivery *amqp.Delivery
 }
@@ -43,6 +46,7 @@ func (l *LogEnd) GetMessage() *mqengine.Message {
 	byte, _ := json.Marshal(l)
 	return &mqengine.Message{
 		Status:              l.Status,
+		TransId:             l.TransId,
 		Body:                byte,
 		CorrelationId:       l.CorrelationId,
 		ReplyTo:             l.ReplyTo,
